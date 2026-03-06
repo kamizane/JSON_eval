@@ -101,8 +101,7 @@ def json_evaluation_new(model_output: str, answer: str, schema: dict):
         return 0, 0, 0, "JSON output doesn't match the schema"
     
     format_score = 1
-    print(model_output)
-    print(answer_json)
+
     if model_output_json == answer_json:
         strict_score = 1
     else:
@@ -112,16 +111,17 @@ def json_evaluation_new(model_output: str, answer: str, schema: dict):
 
     return format_score, similarity_score, strict_score, "Give score in 3 criteria"
 
-def compare_csv_files(file1_path: str, file2_path: str, schema: dict, 
+def compare_csv_files(file1_path: str, file2_path: str,
                       model_output_col: str = 'model_output',
-                      answer_col: str = 'answer',
+                      answer_col1: str = 'Schema',
+                      answer_col2: str = 'Values',
                       output_file: str = 'comparison_results.csv') -> List[Dict[str, Any]]:
     """
     Compara dois arquivos CSV linha por linha usando a função json_evaluation_new.
     
     Args:
-        file1_path: Caminho para o primeiro arquivo CSV
-        file2_path: Caminho para o segundo arquivo CSV
+        file1_path: Caminho para o arquivo CSV GROUND TRUTH
+        file2_path: Caminho para o arquivo CSV TEST
         schema: Schema JSON para validação
         model_output_col: Nome da coluna com a saída do modelo
         answer_col: Nome da coluna com a resposta esperada
@@ -138,7 +138,6 @@ def compare_csv_files(file1_path: str, file2_path: str, schema: dict,
         
         reader1 = csv.DictReader(f1)
         reader2 = csv.DictReader(f2)
-        
         # Converte para listas para poder iterar juntos
         rows1 = list(reader1)
         rows2 = list(reader2)
@@ -155,9 +154,13 @@ def compare_csv_files(file1_path: str, file2_path: str, schema: dict,
             row2 = rows2[i]
             
             # Extrai os valores necessários
-            model_output = row1.get(model_output_col, '')
-            answer = row2.get(answer_col, '')
-            print(model_output == answer)
+            schema = row1.get(answer_col1, '')
+            schema = json.loads(schema) #Converte para dict
+
+            answer = row1.get(answer_col2, '')
+            model_output = row2.get(model_output_col, '')
+
+
             # Realiza a avaliação
             format_score, similarity_score, strict_score, message = json_evaluation_new(
                 model_output, answer, schema
@@ -219,77 +222,6 @@ def print_statistics(results: List[Dict[str, Any]]):
 
 
 if __name__ == "__main__":
-    #Define o schema JSON de exemplo
-    schema_exemplo = {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "required": ["basemats", "dopants", "dopants2basemats"],
-  "properties": {
-    "basemats": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      }
-    },
-    "dopants": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      }
-    },
-    "dopants2basemats": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  "additionalProperties": False
-}
-
-
-# schema_exemplo = {
-#     "type": "object",
-#     "properties": {
-#         "basemats": {
-#             "type": "object",
-#             "additionalProperties": {
-#                 "type": "string"
-#             }
-#         },
-#         "dopants": {
-#             "type": "object",
-#             "additionalProperties": {
-#                 "type": "string"
-#             }
-#         },
-#         "dopants2basemats": {
-#             "type": "object",
-#             "additionalProperties": {
-#                 "type": "array",
-#                 "items": {
-#                     "type": "string"
-#                 }
-#             }
-#         }
-#     },
-#     "required": ["basemats", "dopants", "dopants2basemats"],
-#     "additionalProperties": False
-# }
-
-    
-    
-    jsonl_to_single_column_csv(
-    "testeGT.txt",
-    "testeGT.csv"
-    )
-    jsonl_to_single_column_csv(
-    "testeGT.txt",
-    "testeP.csv"
-    )
 
     #Caminhos dos arquivos
     ground_truth = "testeGT.csv"
@@ -299,8 +231,8 @@ if __name__ == "__main__":
     resultados = compare_csv_files(
         file1_path=ground_truth,
         file2_path=output,
-        schema=schema_exemplo,
         model_output_col='Values',  # Altere para o nome da sua coluna
-        answer_col='Values',               # Altere para o nome da sua coluna
+        answer_col1='Schema',
+        answer_col2='Values',               # Altere para o nome da sua coluna
         output_file='resultados_comparacao.csv'
     )
